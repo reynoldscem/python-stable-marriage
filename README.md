@@ -10,6 +10,7 @@ from matchmaker import Matchmaker
 from Levenshtein import ratio
 
 matchmaker = Matchmaker()
+# matchmaker.marry(men, women, measure)
 matched = matchmaker.marry(['book', 'mountain lion', 'cobra', 'jinja', 'dish'],
                            ['jeans', 'fish', 'seamounts', 'kobler', 'nook'],
                            ratio)
