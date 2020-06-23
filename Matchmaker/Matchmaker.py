@@ -8,22 +8,30 @@ class Person:
         self.crush = None
         self.crush_score = None
 
-    def update_crush(self, new_score, person):
-        raise NotImplementedError()
-
     @property
     def has_crush(self):
         return self.crush is not None
 
     def jilt(self, other):
-        raise NotImplementedError()
+        pass
 
     def break_up(self, other):
-        raise NotImplementedError()
+        pass
 
     def resolve_crush(self):
         self.crush_score = None
         self.crush = None
+
+    def update_crush(self, new_score, person):
+        if not self.has_crush or new_score > self.crush_score:
+
+            if self.has_crush:
+                self.jilt(self.crush)
+
+            self.crush_score = new_score
+            self.crush = person
+        else:
+            self.jilt(person)
 
 
 class Man(Person):
@@ -35,11 +43,6 @@ class Man(Person):
     @property
     def unmarried(self):
         return self.proposed_to is None
-
-    def update_crush(self, new_score, person):
-        if not self.has_crush or new_score > self.crush_score:
-            self.crush_score = new_score
-            self.crush = person
 
     def break_up(self, person):
         self.proposed_to = None
@@ -59,17 +62,6 @@ class Woman(Person):
 
     def suitable(self, man):
         return man.proposed_to == self
-
-    def update_crush(self, new_score, person):
-        if not self.has_crush or new_score > self.crush_score:
-
-            if self.has_crush:
-                self.jilt(self.crush)
-
-            self.crush_score = new_score
-            self.crush = person
-        else:
-            self.jilt(person)
 
 
 class FunctionDefaultDict(defaultdict):
