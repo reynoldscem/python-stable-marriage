@@ -66,10 +66,10 @@ class Matchmaker:
         refusation_count = sum([
             1 for man in self.unmarried_men
         ])
-        for j, woman in enumerate(self.women):
+        for woman in self.women:
             crush = None
             crush_score = None
-            for i, man in enumerate(self.men):
+            for man in self.men:
                 if man.proposed_to != woman:
                     continue
                 if self.no_crush_or_prefer(crush_score, man, woman):
