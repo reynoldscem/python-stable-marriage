@@ -1,3 +1,6 @@
+from collections import defaultdict
+
+
 class Person:
     def __init__(self, name):
         self.name = name
@@ -67,26 +70,24 @@ class Woman(Person):
         return man.proposed_to == self
 
 
+class FunctionDefaultDict(defaultdict):
+    def __missing__(self, key):
+        return_ = self[key[::-1]] = self[key] = self.default_factory(key)
+        return return_
+
+
 class Matchmaker:
     def __init__(self, men, women, measure):
         self.men = [Man(name) for name in men]
         self.women = [Woman(name) for name in women]
         self.measure = measure
-        self._prefs = {}
+        self.preference = FunctionDefaultDict(self._measure)
 
-        assert len(women) >= len(men), (
-            "Must have more (or the same) women than men."
-        )
+        self.assert_more_women()
 
-    def preference(self, man, woman):
-        key = (hash(man), hash(woman))
-        if key not in self._prefs:
-            measure = self._measure(man, woman)
-            self._prefs[key] = measure
-        else:
-            measure = self._prefs[key]
-
-        return measure
+    def assert_more_women(self):
+        message = "Must have more (or the same) women than men."
+        assert len(self.women) >= len(self.men), message
 
     @property
     def unmarried_men(self):
@@ -94,43 +95,37 @@ class Matchmaker:
             if man.unmarried:
                 yield man
 
-    def __stage(self, first_people, second_people):
+    @property
+    def some_men_unmarried(self):
+        return any(man.unmarried for man in self.men)
+
+    def stage(self, first_people, second_people):
         for first_person in first_people:
             for second_person in second_people:
                 if first_person.suitable(second_person):
-                    preference = self.preference(first_person, second_person)
+                    preference = self.preference[first_person, second_person]
                     first_person.update_crush(preference, second_person)
             first_person.resolve_crush()
 
-    def __propose(self):
-        self.__stage(self.unmarried_men, self.women)
+    def propose(self):
+        self.stage(self.unmarried_men, self.women)
 
-    def __select(self):
-        self.__stage(self.women, self.men)
+    def select(self):
+        self.stage(self.women, self.men)
 
-    def _measure(self, man, woman):
+    def _measure(self, args):
+        man, woman = args
         return self.measure(man.name, woman.name)
 
+    def solution(self, man):
+        bride = man.proposed_to
+        preference = self.preference[man, bride]
+
+        return (man.name, bride.name, preference)
+
     def marry(self):
-        '''
-        Run Gale-Shapley algorithm on men and women lists
+        while self.some_men_unmarried:
+            self.propose()
+            self.select()
 
-        men, women : list
-        measure : f(man, woman) -> float
-
-        Returns : list of tuples [(man, woman, couple_score), (...) ...]
-        '''
-        while True:
-            if list(self.unmarried_men):
-                self.__propose()
-                self.__select()
-                continue
-            break
-
-        def _solution_tuple(man):
-            bride = man.proposed_to
-            preference = self.preference(man, bride)
-
-            return (man.name, bride.name, preference)
-
-        return [_solution_tuple(man) for man in self.men]
+        return [self.solution(man) for man in self.men]
