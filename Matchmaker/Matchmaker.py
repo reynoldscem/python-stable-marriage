@@ -28,7 +28,7 @@ class Matchmaker:
     def preference(self, i, j):
         key = (i, j)
         if key not in self._prefs:
-            measure = self._measure(i, j)
+            measure = self._measure(self.men[i], self.women[j])
             self._prefs[key] = measure
         else:
             measure = self._prefs[key]
@@ -85,8 +85,8 @@ class Matchmaker:
                     refusation_count += 1
         return refusation_count
 
-    def _measure(self, i, j):
-        return self.measure(self.men[i].name, self.women[j].name)
+    def _measure(self, man, woman):
+        return self.measure(man.name, woman.name)
 
     def marry(self):
         '''
