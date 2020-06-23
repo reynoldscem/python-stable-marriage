@@ -6,7 +6,29 @@ class Person:
         self.crush_score = None
 
     def update_crush(self, new_score, person):
+        if not self.has_crush or new_score > self.crush_score:
+
+            if self.has_crush:
+                self.jilt(self.crush)
+
+            self.crush_score = new_score
+            self.crush = person
+        else:
+            self.jilt(person)
+
+    @property
+    def has_crush(self):
+        return self.crush is not None
+
+    def jilt(self, other):
         raise NotImplementedError()
+
+    def break_up(self, other):
+        raise NotImplementedError()
+
+    def resolve_crush(self):
+        self.crush_score = None
+        self.crush = None
 
 
 class Man(Person):
@@ -20,22 +42,29 @@ class Man(Person):
         return self.proposed_to is None
 
     def update_crush(self, new_score, person):
-        if self.crush_score is None or new_score > self.crush_score:
+        if not self.has_crush or new_score > self.crush_score:
             self.crush_score = new_score
             self.crush = person
+
+    def break_up(self, person):
+        self.proposed_to = None
+        self.exes.add(person)
+
+    def suitable(self, person):
+        return person not in self.exes
+
+    def resolve_crush(self):
+            self.proposed_to = self.crush
+            self.crush_score = None
+            self.crush = None
 
 
 class Woman(Person):
-    def update_crush(self, new_score, person):
-        if self.crush_score is None or new_score > self.crush_score:
-            if self.crush is not None:
-                self.crush.proposed_to = None
-                self.crush.exes.add(self)
-            self.crush_score = new_score
-            self.crush = person
-        else:
-            person.proposed_to = None
-            person.exes.add(self)
+    def jilt(self, man):
+        man.break_up(self)
+
+    def suitable(self, man):
+        return man.proposed_to == self
 
 
 class Matchmaker:
@@ -59,34 +88,25 @@ class Matchmaker:
 
         return measure
 
-    def no_crush_or_prefer(self, crush_score, man, woman):
-        return crush_score is None or self.preference(man, woman) > crush_score
-
     @property
     def unmarried_men(self):
         for man in self.men:
             if man.unmarried:
                 yield man
 
+    def __stage(self, first_people, second_people):
+        for first_person in first_people:
+            for second_person in second_people:
+                if first_person.suitable(second_person):
+                    preference = self.preference(first_person, second_person)
+                    first_person.update_crush(preference, second_person)
+            first_person.resolve_crush()
+
     def __propose(self):
-        for man in self.unmarried_men:
-            for woman in self.women:
-                if woman in man.exes:
-                    continue
-                man.update_crush(self.preference(man, woman), woman)
-            man.proposed_to = man.crush
-            man.crush_score = None
-            man.crush = None
+        self.__stage(self.unmarried_men, self.women)
 
     def __select(self):
-        for woman in self.women:
-            for man in self.men:
-                if man.proposed_to != woman:
-                    continue
-                woman.update_crush(self.preference(man, woman), man)
-
-            woman.crush_score = None
-            woman.crush = None
+        self.__stage(self.women, self.men)
 
     def _measure(self, man, woman):
         return self.measure(man.name, woman.name)
