@@ -8,6 +8,8 @@ from matchmaker import Matchmaker
 
 # pip install python-levenshtein
 from Levenshtein import ratio
+# pip install stringdist - works on pypy
+from stringdist import levenshtein_norm
 
 matchmaker = Matchmaker()
 # matchmaker.marry(men, women, measure)
@@ -27,3 +29,5 @@ Warnings:
 * len(women) >= len(men) . Otherwise you'll get TypeError
 * if len(women) > len(men) there will be unmarried women left
 * _measure_ function should be commutative. _measure_(a, b) == _measure_(b, a)
+* Because a lot of time is spent in a tight loop it runs *much* faster with
+    `pypy`.
