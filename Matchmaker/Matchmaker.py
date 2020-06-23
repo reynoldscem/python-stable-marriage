@@ -25,18 +25,18 @@ class Matchmaker:
             "Must have more (or the same) women than men."
         )
 
-    def preference(self, i, j):
-        key = (i, j)
+    def preference(self, man, woman):
+        key = (hash(man), hash(woman))
         if key not in self._prefs:
-            measure = self._measure(self.men[i], self.women[j])
+            measure = self._measure(man, woman)
             self._prefs[key] = measure
         else:
             measure = self._prefs[key]
 
         return measure
 
-    def no_crush_or_prefer(self, crush_score, i, j):
-        return crush_score is None or self.preference(i, j) > crush_score
+    def no_crush_or_prefer(self, crush_score, man, woman):
+        return crush_score is None or self.preference(man, woman) > crush_score
 
     @property
     def unmarried_men(self):
@@ -51,15 +51,15 @@ class Matchmaker:
                 yield index, man
 
     def __propose(self):
-        for i, man in self.enum_unmarried_men:
+        for man in self.unmarried_men:
             crush = None
             crush_score = None
-            for j, woman in enumerate(self.women):
+            for woman in self.women:
                 if woman in man.exes:
                     continue
-                if self.no_crush_or_prefer(crush_score, i, j):
-                    crush_score = self.preference(i, j)
-                    crush = j
+                if self.no_crush_or_prefer(crush_score, man, woman):
+                    crush_score = self.preference(man, woman)
+                    crush = woman
             man.proposed_to = crush
 
     def __select(self):
@@ -70,15 +70,15 @@ class Matchmaker:
             crush = None
             crush_score = None
             for i, man in enumerate(self.men):
-                if man.proposed_to != j:
+                if man.proposed_to != woman:
                     continue
-                if self.no_crush_or_prefer(crush_score, i, j):
+                if self.no_crush_or_prefer(crush_score, man, woman):
                     if crush is not None:
-                        self.men[crush].proposed_to = None
-                        self.men[crush].exes.add(woman)
+                        crush.proposed_to = None
+                        crush.exes.add(woman)
                         refusation_count += 1
-                    crush_score = self.preference(i, j)
-                    crush = i
+                    crush_score = self.preference(man, woman)
+                    crush = man
                 else:
                     man.proposed_to = None
                     man.exes.add(woman)
@@ -105,12 +105,10 @@ class Matchmaker:
             if not refusation_count:
                 break
 
-        def _solution_tuple(i, man):
-            name = man.name
-            proposed_to = man.proposed_to
-            bride = self.women[proposed_to].name
-            preference = self.preference(i, proposed_to)
+        def _solution_tuple(man):
+            bride = man.proposed_to
+            preference = self.preference(man, bride)
 
-            return (name, bride, preference)
+            return (man.name, bride.name, preference)
 
-        return [_solution_tuple(index, man) for index, man in enumerate(self.men)]
+        return [_solution_tuple(man) for man in self.men]
