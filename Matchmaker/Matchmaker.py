@@ -55,7 +55,7 @@ class Matchmaker:
             crush = None
             crush_score = None
             for j, woman in enumerate(self.women):
-                if j in man.exes:
+                if woman in man.exes:
                     continue
                 if self.no_crush_or_prefer(crush_score, i, j):
                     crush_score = self.preference(i, j)
@@ -75,13 +75,13 @@ class Matchmaker:
                 if self.no_crush_or_prefer(crush_score, i, j):
                     if crush is not None:
                         self.men[crush].proposed_to = None
-                        self.men[crush].exes.add(j)
+                        self.men[crush].exes.add(woman)
                         refusation_count += 1
                     crush_score = self.preference(i, j)
                     crush = i
                 else:
                     man.proposed_to = None
-                    man.exes.add(j)
+                    man.exes.add(woman)
                     refusation_count += 1
         return refusation_count
 
