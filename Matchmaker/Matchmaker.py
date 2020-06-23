@@ -1,62 +1,87 @@
+class Man:
+    def __init__(self, name):
+        self.name = name
+        self.proposed_to = None
+        self.exes = set()
+
+    @property
+    def unmarried(self):
+        return self.proposed_to is None
+
+
 class Matchmaker:
     def __init__(self, men, women, measure):
-        self.men = [self._make_man_container(man) for man in men]
+        self.men = [Man(name) for name in men]
         self.women = women
         self.measure = measure
+        self._prefs = {}
 
         assert len(women) >= len(men), (
             "Must have more (or the same) women than men."
         )
 
-    def __propose(self, prefs):
-        for i, man in enumerate(self.men):
-            if man['proposed_to']:
-                continue
+    def preference(self, i, j):
+        key = (i, j)
+        if key not in self._prefs:
+            measure = self._measure(i, j)
+            self._prefs[key] = measure
+        else:
+            measure = self._prefs[key]
+
+        return measure
+
+    def no_crush_or_prefer(self, crush_score, i, j):
+        return crush_score is None or self.preference(i, j) > crush_score
+
+    @property
+    def unmarried_men(self):
+        for man in self.men:
+            if man.unmarried:
+                yield man
+
+    @property
+    def enum_unmarried_men(self):
+        for index, man in enumerate(self.men):
+            if man.unmarried:
+                yield index, man
+
+    def __propose(self):
+        for i, man in self.enum_unmarried_men:
             crush = None
             crush_score = None
             for j, woman in enumerate(self.women):
-                if j in man['exes']:
+                if j in man.exes:
                     continue
-                prefs[i, j] = prefs.get((i, j), self._measure(i, j))
-                if crush_score is None or prefs[i, j] > crush_score:
-                    crush_score = prefs[i, j]
+                if self.no_crush_or_prefer(crush_score, i, j):
+                    crush_score = self.preference(i, j)
                     crush = j
-            man['proposed_to'] = crush
+            man.proposed_to = crush
 
-    def __select(self, prefs):
+    def __select(self):
         refusation_count = sum([
-            1 for man in self.men if man['proposed_to'] is None
+            1 for man in self.unmarried_men
         ])
         for j, woman in enumerate(self.women):
             crush = None
             crush_score = None
             for i, man in enumerate(self.men):
-                if man['proposed_to'] != j:
+                if man.proposed_to != j:
                     continue
-                prefs[i, j] = prefs.get((i, j), self._measure(i, j))
-                if crush_score is None or prefs[i, j] > crush_score:
+                if self.no_crush_or_prefer(crush_score, i, j):
                     if crush is not None:
-                        self.men[crush]['proposed_to'] = None
-                        self.men[crush]['exes'].append(j)
+                        self.men[crush].proposed_to = None
+                        self.men[crush].exes.add(j)
                         refusation_count += 1
-                    crush_score = prefs[i, j]
+                    crush_score = self.preference(i, j)
                     crush = i
                 else:
-                    man['proposed_to'] = None
-                    man['exes'].append(j)
+                    man.proposed_to = None
+                    man.exes.add(j)
                     refusation_count += 1
         return refusation_count
 
-    @staticmethod
-    def _make_man_container(man):
-        return {
-            'soul': man,
-            'proposed_to': None,
-            'exes': []
-        }
-
     def _measure(self, i, j):
-        return self.measure(self.men[i]['soul'], self.women[j])
+        return self.measure(self.men[i].name, self.women[j])
 
     def marry(self):
         '''
@@ -67,25 +92,19 @@ class Matchmaker:
 
         Returns : list of tuples [(man, woman, couple_score), (...) ...]
         '''
-        self.prefs = {}
-
         while True:
-            unmarried_men = [
-                man for man in self.men
-                if man['proposed_to'] is None
-            ]
-            if not unmarried_men:
+            if not list(self.unmarried_men):
                 break
-            self.__propose(self.prefs)
-            refusation_count = self.__select(self.prefs)
+            self.__propose()
+            refusation_count = self.__select()
             if not refusation_count:
                 break
 
         def _solution_tuple(i, man):
-            name = man['soul']
-            proposed_to = man['proposed_to']
+            name = man.name
+            proposed_to = man.proposed_to
             bride = self.women[proposed_to]
-            preference = self.prefs[i, proposed_to]
+            preference = self.preference(i, proposed_to)
 
             return (name, bride, preference)
 
