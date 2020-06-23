@@ -44,12 +44,6 @@ class Matchmaker:
             if man.unmarried:
                 yield man
 
-    @property
-    def enum_unmarried_men(self):
-        for index, man in enumerate(self.men):
-            if man.unmarried:
-                yield index, man
-
     def __propose(self):
         for man in self.unmarried_men:
             crush = None
