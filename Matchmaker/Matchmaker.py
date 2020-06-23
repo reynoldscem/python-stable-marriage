@@ -9,10 +9,15 @@ class Man:
         return self.proposed_to is None
 
 
+class Woman:
+    def __init__(self, name):
+        self.name = name
+
+
 class Matchmaker:
     def __init__(self, men, women, measure):
         self.men = [Man(name) for name in men]
-        self.women = women
+        self.women = [Woman(name) for name in women]
         self.measure = measure
         self._prefs = {}
 
@@ -81,7 +86,7 @@ class Matchmaker:
         return refusation_count
 
     def _measure(self, i, j):
-        return self.measure(self.men[i].name, self.women[j])
+        return self.measure(self.men[i].name, self.women[j].name)
 
     def marry(self):
         '''
@@ -103,7 +108,7 @@ class Matchmaker:
         def _solution_tuple(i, man):
             name = man.name
             proposed_to = man.proposed_to
-            bride = self.women[proposed_to]
+            bride = self.women[proposed_to].name
             preference = self.preference(i, proposed_to)
 
             return (name, bride, preference)
