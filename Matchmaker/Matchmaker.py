@@ -15,7 +15,7 @@ class Person:
     def jilt(self, other):
         pass
 
-    def break_up(self, other):
+    def jilted_by(self, other):
         pass
 
     def resolve_crush(self):
@@ -44,7 +44,7 @@ class Man(Person):
     def unmarried(self):
         return self.proposed_to is None
 
-    def break_up(self, person):
+    def jilted_by(self, person):
         self.proposed_to = None
         self.exes.add(person)
 
@@ -58,7 +58,7 @@ class Man(Person):
 
 class Woman(Person):
     def jilt(self, man):
-        man.break_up(self)
+        man.jilted_by(self)
 
     def suitable(self, man):
         return man.proposed_to == self
