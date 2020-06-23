@@ -1,6 +1,17 @@
-class Man:
+class Person:
     def __init__(self, name):
         self.name = name
+
+        self.crush = None
+        self.crush_score = None
+
+    def update_crush(self, new_score, person):
+        raise NotImplementedError()
+
+
+class Man(Person):
+    def __init__(self, name):
+        super().__init__(name)
         self.proposed_to = None
         self.exes = set()
 
@@ -8,10 +19,23 @@ class Man:
     def unmarried(self):
         return self.proposed_to is None
 
+    def update_crush(self, new_score, person):
+        if self.crush_score is None or new_score > self.crush_score:
+            self.crush_score = new_score
+            self.crush = person
 
-class Woman:
-    def __init__(self, name):
-        self.name = name
+
+class Woman(Person):
+    def update_crush(self, new_score, person):
+        if self.crush_score is None or new_score > self.crush_score:
+            if self.crush is not None:
+                self.crush.proposed_to = None
+                self.crush.exes.add(self)
+            self.crush_score = new_score
+            self.crush = person
+        else:
+            person.proposed_to = None
+            person.exes.add(self)
 
 
 class Matchmaker:
@@ -46,38 +70,23 @@ class Matchmaker:
 
     def __propose(self):
         for man in self.unmarried_men:
-            crush = None
-            crush_score = None
             for woman in self.women:
                 if woman in man.exes:
                     continue
-                if self.no_crush_or_prefer(crush_score, man, woman):
-                    crush_score = self.preference(man, woman)
-                    crush = woman
-            man.proposed_to = crush
+                man.update_crush(self.preference(man, woman), woman)
+            man.proposed_to = man.crush
+            man.crush_score = None
+            man.crush = None
 
     def __select(self):
-        refusation_count = sum([
-            1 for man in self.unmarried_men
-        ])
         for woman in self.women:
-            crush = None
-            crush_score = None
             for man in self.men:
                 if man.proposed_to != woman:
                     continue
-                if self.no_crush_or_prefer(crush_score, man, woman):
-                    if crush is not None:
-                        crush.proposed_to = None
-                        crush.exes.add(woman)
-                        refusation_count += 1
-                    crush_score = self.preference(man, woman)
-                    crush = man
-                else:
-                    man.proposed_to = None
-                    man.exes.add(woman)
-                    refusation_count += 1
-        return refusation_count
+                woman.update_crush(self.preference(man, woman), man)
+
+            woman.crush_score = None
+            woman.crush = None
 
     def _measure(self, man, woman):
         return self.measure(man.name, woman.name)
@@ -92,12 +101,11 @@ class Matchmaker:
         Returns : list of tuples [(man, woman, couple_score), (...) ...]
         '''
         while True:
-            if not list(self.unmarried_men):
-                break
-            self.__propose()
-            refusation_count = self.__select()
-            if not refusation_count:
-                break
+            if list(self.unmarried_men):
+                self.__propose()
+                self.__select()
+                continue
+            break
 
         def _solution_tuple(man):
             bride = man.proposed_to
