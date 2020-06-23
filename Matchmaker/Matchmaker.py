@@ -9,15 +9,7 @@ class Person:
         self.crush_score = None
 
     def update_crush(self, new_score, person):
-        if not self.has_crush or new_score > self.crush_score:
-
-            if self.has_crush:
-                self.jilt(self.crush)
-
-            self.crush_score = new_score
-            self.crush = person
-        else:
-            self.jilt(person)
+        raise NotImplementedError()
 
     @property
     def has_crush(self):
@@ -57,9 +49,8 @@ class Man(Person):
         return person not in self.exes
 
     def resolve_crush(self):
-            self.proposed_to = self.crush
-            self.crush_score = None
-            self.crush = None
+        self.proposed_to = self.crush
+        super().resolve_crush()
 
 
 class Woman(Person):
@@ -68,6 +59,17 @@ class Woman(Person):
 
     def suitable(self, man):
         return man.proposed_to == self
+
+    def update_crush(self, new_score, person):
+        if not self.has_crush or new_score > self.crush_score:
+
+            if self.has_crush:
+                self.jilt(self.crush)
+
+            self.crush_score = new_score
+            self.crush = person
+        else:
+            self.jilt(person)
 
 
 class FunctionDefaultDict(defaultdict):
