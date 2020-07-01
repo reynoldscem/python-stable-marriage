@@ -47,8 +47,8 @@ class Person:
 class Man(Person):
     # Men can proposition up to one woman at once, and suitable women are those
     # who have not yet rejected (here jilted) him.
-    def __init__(self, obj):
-        super().__init__(obj)
+    def __init__(self, obj, **kwargs):
+        super().__init__(obj, **kwargs)
         self.proposed_to = None
         self.exes = set()
 
