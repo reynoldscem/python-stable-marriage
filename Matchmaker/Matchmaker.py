@@ -2,8 +2,9 @@ from collections import defaultdict
 
 
 class Person:
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, obj):
+        self.name = repr(obj)
+        self.data = obj
 
         self.crush = None
         self.crush_score = None
@@ -35,8 +36,8 @@ class Person:
 
 
 class Man(Person):
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, obj):
+        super().__init__(obj)
         self.proposed_to = None
         self.exes = set()
 
@@ -115,7 +116,7 @@ class Matchmaker:
         bride = man.proposed_to
         preference = self.preference[man, bride]
 
-        return (man.name, bride.name, preference)
+        return (man.data, bride.data, preference)
 
     def marry(self):
         while self.some_men_unmarried:
