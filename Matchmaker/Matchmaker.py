@@ -45,6 +45,8 @@ class Person:
 
 
 class Man(Person):
+    # Men can proposition up to one woman at once, and suitable women are those
+    # who have not yet rejected (here jilted) him.
     def __init__(self, obj):
         super().__init__(obj)
         self.proposed_to = None
@@ -67,6 +69,8 @@ class Man(Person):
 
 
 class Woman(Person):
+    # A suitable partner is one who has proposed to the woman, forward a
+    # message to a man if he has been jilted.
     def jilt(self, man):
         if man:
             man.jilted_by(self)
@@ -76,25 +80,71 @@ class Woman(Person):
 
 
 class FunctionDefaultDict(defaultdict):
+    # This is for memoising the scores. We use self[key[::-1]] = self[key] in
+    # order to memoise it in both directions, given scores should be reflexive.
+    # The overridden __missing__ method is to compute the measure on the key
+    # (which is a pair of people, and memoise it. Can give significant speedup
+    # if measure is expensive.
     def __missing__(self, key):
         return_ = self[key[::-1]] = self[key] = self.default_factory(key)
         return return_
 
 
+class Measure():
+    def __init__(self, measure, measure_attribute=None):
+        if isinstance(measure, type(self)):
+            # If we're passed a measure just 'become' it.
+            self.measure = measure.measure
+            self.attribute = measure.attribute
+            self.cache = measure.cache
+
+            return
+
+        self.measure = measure
+        self.attribute = self.make_attribute_func(measure_attribute)
+        self.cache = FunctionDefaultDict(self)
+
+    @staticmethod
+    def make_attribute_func(measure_attribute):
+        if measure_attribute:
+            def _measure_attribute(person):
+                return getattr(person.data, measure_attribute)
+        else:
+            def _measure_attribute(person):
+                return person.data
+
+        return _measure_attribute
+
+    def __call__(self, argument):
+        man, woman = argument
+
+        return self.measure(self.attribute(man), self.attribute(woman))
+
+
 class Matchmaker:
     def __init__(
-            self,
-            men, women,
-            measure, measure_attribute=None,
-            person_kwargs={}):
-
+            self, men, women, measure,
+            measure_attribute=None, person_kwargs={}):
         self.men = self.make_people_from_objects(Man, men, person_kwargs)
         self.women = self.make_people_from_objects(Woman, women, person_kwargs)
 
-        self.measure = measure
-        self.measure_attribute = measure_attribute
+        # If `measure` is not a measure object, make one. Pass the measuring
+        # function and an optional attribute to call on the objects before
+        # measuring. E.g. if we have a function measuring strings and File
+        # objects with a string `name` attribute then `attribute` could be
+        # `name` and we would measure like `measure(man.name, woman.name)`.
+        # Measure object has a cache for making memoised calls.
+        #
+        # Bit of a weird approach, but allows for choosing:
+        #  - Simple interface where user just passes a function
+        #  - Slight configuration where they also pass an attribute
+        #  - Full dependency injection where they pass an arbitrary Measure
+        if not isinstance(measure, Measure):
+            measure = Measure(measure, measure_attribute)
 
-        self.preference = FunctionDefaultDict(self._measure)
+        # Get memoised preference. Treat it like a function, but access with
+        # self.prefence[man, woman] or self.preference[woman, man].
+        self.preference = measure.cache
 
         self.ensure_more_women()
 
@@ -118,6 +168,13 @@ class Matchmaker:
         return any(man.unmarried for man in self.men)
 
     def stage(self, first_people, second_people):
+        # Both phases of the algorithm are structurally similar. One group goes
+        # through its suitors and attempts to find a(n improved) potentiall
+        # spouse. The exact mechanics of how they find and deal with suitors
+        # depends on the type of Person object. Hopefully variants of the
+        # stable marriage problem should be obtainable by sublcassing person
+        # and calling stages with different groups of people / in different
+        # orders.
         for first_person in first_people:
             for second_person in second_people:
                 if first_person.suitable(second_person):
@@ -131,21 +188,11 @@ class Matchmaker:
     def select(self):
         self.stage(self.women, self.men)
 
-    def _measure(self, args):
-        man, woman = args
-        if self.measure_attribute:
-            return self.measure(
-                getattr(man.data, self.measure_attribute),
-                getattr(woman.data, self.measure_attribute)
-            )
-        else:
-            return self.measure(man.data, woman.data)
-
     def solution(self, man):
         bride = man.proposed_to
-        preference = self.preference[man, bride]
+        score = self.preference[man, bride]
 
-        return (man.data, bride.data, preference)
+        return (man.data, bride.data, score)
 
     def marry(self):
         while self.some_men_unmarried:
