@@ -78,11 +78,12 @@ class Matchmaker:
         self.measure = measure
         self.preference = FunctionDefaultDict(self._measure)
 
-        self.assert_more_women()
+        self.ensure_more_women()
 
-    def assert_more_women(self):
+    def ensure_more_women(self):
         message = "Must have more (or the same) women than men."
-        assert len(self.women) >= len(self.men), message
+        if len(self.women) >= len(self.men):
+            raise ValueError(message)
 
     @property
     def unmarried_men(self):
