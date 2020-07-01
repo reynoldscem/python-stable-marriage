@@ -2,9 +2,11 @@ from collections import defaultdict
 
 
 class Person:
-    def __init__(self, obj):
+    def __init__(self, obj, higher_is_better=False):
         self.name = repr(obj)
         self.data = obj
+
+        self.higher_is_better = higher_is_better
 
         self.crush = None
         self.crush_score = None
@@ -23,11 +25,18 @@ class Person:
         self.crush_score = None
         self.crush = None
 
-    def update_crush(self, new_score, person):
-        if not self.has_crush or new_score > self.crush_score:
+    def crush_improvement(self, new_score):
+        if not self.has_crush:
+            return True
 
-            if self.has_crush:
-                self.jilt(self.crush)
+        if self.higher_is_better:
+            return new_score > self.crush_score
+        else:
+            return new_score < self.crush_score
+
+    def update_crush(self, new_score, person):
+        if self.crush_improvement(new_score):
+            self.jilt(self.crush)
 
             self.crush_score = new_score
             self.crush = person
@@ -59,7 +68,8 @@ class Man(Person):
 
 class Woman(Person):
     def jilt(self, man):
-        man.jilted_by(self)
+        if man:
+            man.jilted_by(self)
 
     def suitable(self, man):
         return man.proposed_to == self
@@ -72,17 +82,29 @@ class FunctionDefaultDict(defaultdict):
 
 
 class Matchmaker:
-    def __init__(self, men, women, measure):
-        self.men = [Man(name) for name in men]
-        self.women = [Woman(name) for name in women]
+    def __init__(
+            self,
+            men, women,
+            measure, measure_attribute=None,
+            person_kwargs={}):
+
+        self.men = self.make_people_from_objects(Man, men, person_kwargs)
+        self.women = self.make_people_from_objects(Woman, women, person_kwargs)
+
         self.measure = measure
+        self.measure_attribute = measure_attribute
+
         self.preference = FunctionDefaultDict(self._measure)
 
         self.ensure_more_women()
 
+    @staticmethod
+    def make_people_from_objects(cls, objects, person_kwargs):
+        return [cls(obj, **person_kwargs) for obj in objects]
+
     def ensure_more_women(self):
         message = "Must have more (or the same) women than men."
-        if len(self.women) >= len(self.men):
+        if len(self.women) < len(self.men):
             raise ValueError(message)
 
     @property
@@ -111,7 +133,13 @@ class Matchmaker:
 
     def _measure(self, args):
         man, woman = args
-        return self.measure(man.name, woman.name)
+        if self.measure_attribute:
+            return self.measure(
+                getattr(man.data, self.measure_attribute),
+                getattr(woman.data, self.measure_attribute)
+            )
+        else:
+            return self.measure(man.data, woman.data)
 
     def solution(self, man):
         bride = man.proposed_to
